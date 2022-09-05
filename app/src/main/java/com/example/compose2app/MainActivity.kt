@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -19,16 +20,25 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
 import com.example.compose2app.ui.theme.Compose2AppTheme
 import java.util.*
 
@@ -37,6 +47,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             Compose2AppTheme {
+                MyApp()
                 // A surface container using the 'background' color from the theme
             }
         }
@@ -45,34 +56,55 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApp(){
     Compose2AppTheme{
-        Scaffold(bottomBar = {
-            AppBottomNavigation()
-        }) {paddingValues ->
-        HomeScreen()
+        val navController = rememberNavController()
+        Scaffold(
+            bottomBar = {
+            AppBottomNavigation(navController = navController)
+        }
+        ) {paddingValues ->
+            NavHostContainer(navController = navController, paddingValues =paddingValues )
 
         }
         
     }
 }
+
 @Composable
-fun AppBottomNavigation(modifier: Modifier=Modifier){
+fun NavHostContainer(navController: NavHostController, paddingValues: PaddingValues){
+    NavHost(navController = navController, startDestination = "home",
+    modifier = Modifier.padding(paddingValues = paddingValues),
+    builder = {
+        composable("home"){
+            HomeScreen()
+        }
+        composable("profile"){
+            ProfileScreen()
+        }
+    })
+
+}
+
+
+@Composable
+fun AppBottomNavigation(modifier: Modifier=Modifier,navController: NavHostController){
     BottomNavigation(modifier,
     backgroundColor = MaterialTheme.colors.background) {
-        BottomNavigationItem(selected = true, onClick = { /*TODO*/ },
-            icon = { Icon(imageVector = Icons.Default.Home, contentDescription =null ) },
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+
+        var curruentRoute = navBackStackEntry?.destination?.route
+
+        Constant.BottomNavItems.forEach {navItem ->
+            BottomNavigationItem(selected = curruentRoute ==navItem.route, onClick = { navController.navigate(navItem.route)},
+            icon = {
+                Icon(imageVector = navItem.icon, contentDescription = "null")
+            },
             label = {
-                Text(text = "Home")
-            }
-        )
-        BottomNavigationItem(selected = false, onClick = { /*TODO*/ },
-        icon = {
-            Icon(imageVector = Icons.Default.Add, contentDescription = null)
-        },
-        label = {
-            Text(text = "Add")
-        })
+                Text(text = navItem.label)
+            },
+            alwaysShowLabel = false)
+        }
     }
-    
+
 }
 
 @Composable
@@ -83,12 +115,17 @@ fun HomeScreen(modifier: Modifier=Modifier){
             .verticalScroll(rememberScrollState())
             .padding(vertical = 16.dp)) {
         Spacer(Modifier.height(10.dp))
+
         SearchBar()
+
         Spacer(modifier = Modifier.height(50.dp))
+
         HomeSection(title = R.string.align_your_body) {
             AlignYOurBodyRow()
         }
+
         Spacer(modifier = Modifier.height(50.dp))
+
         HomeSection(title = R.string.favourite_collection) {
             FavouriteCollectionGrid()
         }
@@ -140,7 +177,7 @@ fun AlignYourBody(modifier: Modifier=Modifier,@DrawableRes drawable: Int,@String
         , contentScale = ContentScale.Crop)
         Text(text = stringResource(id = text),modifier=modifier.paddingFromBaseline(top = 24.dp, bottom = 8.dp), style = MaterialTheme.typography.h6)
     }
-}+
+}
 
 
 
@@ -158,18 +195,20 @@ fun AlignYOurBodyRow(modifier: Modifier=Modifier){
 }
 
 @Composable
-fun FavouriteCollection(@DrawableRes drawable: Int,@StringRes text: Int,modifier: Modifier=Modifier){
+fun FavouriteCollection(modifier: Modifier=Modifier,@DrawableRes drawable: Int,@StringRes text: Int){
     Surface(modifier = Modifier,
-    shape = MaterialTheme.shapes.small) {
+    shape = MaterialTheme.shapes.small
+    )
+    {
         Row(verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.width(192.dp)) {
+            modifier = modifier.width(192.dp)) {
             Image(painter = painterResource(drawable),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.size(56.dp))
-            Text(text = stringResource(text),
-                style = MaterialTheme.typography.h6,
-                modifier = Modifier.padding(horizontal = 16.dp))
+                modifier = modifier.size(56.dp))
+            Text(text = stringResource(id = text),
+                style = MaterialTheme.typography.subtitle1,
+                modifier = modifier.padding(horizontal = 16.dp))
         }
     }
 }
@@ -182,10 +221,35 @@ fun FavouriteCollectionGrid(modifier: Modifier=Modifier){
     verticalArrangement = Arrangement.spacedBy(8.dp),
     horizontalArrangement = Arrangement.spacedBy(8.dp)){
         items(favouriteCollection){item ->
-            FavouriteCollection(item.drawable,item.text)
+            FavouriteCollection(drawable = item.drawable, text = item.text)
         }
     }
 }
+
+
+@Composable
+fun ProfileScreen() {
+    // Column Composable,
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White),
+        // parameters set to place the items in center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Icon Composable
+        Icon(
+            imageVector = Icons.Default.Person,
+            contentDescription = "Profile",
+            tint = Color(0xFF0F9D58)
+        )
+        // Text to Display the current Screen
+        Text(text = "Profile", color = Color.Black)
+    }
+}
+
+
 
 
 @Preview(showBackground = true, showSystemUi = true, backgroundColor = 0xFFF0EAE2
@@ -222,11 +286,11 @@ private data class DrawableStringPair(
 
 private val favouriteCollection = listOf(
     R.drawable.second_yoga to R.string.favourite_collection,
-    R.drawable.second_yoga to 1,
-    R.drawable.second_yoga to 1,
-    R.drawable.second_yoga to 1,
-    R.drawable.second_yoga to 1,
-    R.drawable.second_yoga to 1
+    R.drawable.second_yoga to R.string.favourite_collection,
+    R.drawable.second_yoga to R.string.favourite_collection,
+    R.drawable.second_yoga to R.string.favourite_collection,
+    R.drawable.second_yoga to R.string.favourite_collection,
+    R.drawable.second_yoga to R.string.favourite_collection
 ).map { FavouriteCollectionData(it.first,it.second) }
 
 private data class FavouriteCollectionData(
